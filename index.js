@@ -1,148 +1,169 @@
 var Imap = require('imap');
-var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var MailParser = require("mailparser").MailParser;
 var fs = require("fs");
 var path = require('path');
 var async = require('async');
 
-module.exports = MailListener;
+class MailListener extends EventEmitter {
+  constructor(options) {
+    super();
+    this.uids = [];
+    this.isFetchingUnreadMails = false;
+    this.setCofigurationOptions(options);
+    this.instantiateImap(options);
+    this.setEventListeners();
 
-function MailListener(options) {
-  this.markSeen = !! options.markSeen;
-  this.mailbox = options.mailbox || "INBOX";
-  if ('string' === typeof options.searchFilter) {
-    this.searchFilter = [options.searchFilter];
-  } else {
-    this.searchFilter = options.searchFilter || ["UNSEEN"];
   }
-  this.fetchUnreadOnStart = !! options.fetchUnreadOnStart;
-  this.mailParserOptions = options.mailParserOptions || {};
-  if (options.attachments && options.attachmentOptions && options.attachmentOptions.stream) {
-    this.mailParserOptions.streamAttachments = true;
+
+  instantiateImap(options) {
+    this.imap = new Imap({
+      xoauth2: options.xoauth2,
+      user: options.username,
+      password: options.password,
+      host: options.host,
+      port: options.port,
+      tls: options.tls,
+      tlsOptions: options.tlsOptions || {},
+      connTimeout: options.connTimeout || null,
+      authTimeout: options.authTimeout || null,
+      debug: options.debug || null
+    });
   }
-  this.attachmentOptions = options.attachmentOptions || {};
-  this.attachments = options.attachments || false;
-  this.attachmentOptions.directory = (this.attachmentOptions.directory ? this.attachmentOptions.directory : '');
-  this.imap = new Imap({
-    xoauth2: options.xoauth2,
-    user: options.username,
-    password: options.password,
-    host: options.host,
-    port: options.port,
-    tls: options.tls,
-    tlsOptions: options.tlsOptions || {},
-    connTimeout: options.connTimeout || null,
-    authTimeout: options.authTimeout || null,
-    debug: options.debug || null
-  });
 
-  this.imap.once('ready', imapReady.bind(this));
-  this.imap.once('close', imapClose.bind(this));
-  this.imap.on('error', imapError.bind(this));
-}
-
-util.inherits(MailListener, EventEmitter);
-
-MailListener.prototype.start = function() {
-  this.imap.connect();
-};
-
-MailListener.prototype.stop = function() {
-  this.imap.end();
-};
-
-function imapReady() {
-  var self = this;
-  this.imap.openBox(this.mailbox, false, function(err, mailbox) {
-    if (err) {
-      self.emit('error', err);
-    } else {
-      self.emit('server:connected');
-      if (self.fetchUnreadOnStart) {
-        parseUnread.call(self);
-      }
-      var listener = imapMail.bind(self);
-      self.imap.on('mail', listener);
-      self.imap.on('update', listener);
+  processSearchFilterValue(value) {
+    if (Array.isArray(value) == true && value.length > 0) {
+      return value;
     }
-  });
-}
 
-function imapClose() {
-  this.emit('server:disconnected');
-}
+    if (typeof value === 'string') {
+      return [value];
+    }
 
-function imapError(err) {
-  this.emit('error', err);
-}
+    return ['UNSEEN']
+  }
 
-function imapMail() {
-  parseUnread.call(this);
-}
+  setCofigurationOptions(options) {
+    this.markSeen = options.markSeen || true;
+    this.mailbox = options.mailbox || "INBOX";
+    this.fetchUnreadOnStart = options.fetchUnreadOnStart || true;
+    this.mailParserOptions = options.mailParserOptions || {};
+    this.attachmentOptions = options.attachmentOptions || {};
+    this.attachments = options.attachments || false;
+    this.searchFilter = this.processSearchFilterValue(options.searchFilter);
 
-function parseUnread() {
-  var self = this;
-  this.imap.search(self.searchFilter, function(err, results) {
-    if (err) {
-      self.emit('error', err);
-    } else if (results.length > 0) {
-      async.each(results, function( result, callback) {
-        var f = self.imap.fetch(result, {
-          bodies: '',
-          markSeen: self.markSeen
+    //
+    this.attachmentOptions.directory = (this.attachmentOptions.directory ? this.attachmentOptions.directory : '');
+
+    if (options.attachments && options.attachmentOptions && options.attachmentOptions.stream) {
+      this.mailParserOptions.streamAttachments = true;
+    }
+  }
+
+  setEventListeners() {
+    this.imap.once('ready', () => this.imapReady());
+    this.imap.once('close', () => this.imapClose());
+    this.imap.on('error', () => this.imapError());
+  }
+
+  /** */
+  start() {
+    this.imap.connect();
+  };
+
+  stop() {
+    this.imap.end();
+  };
+
+  /** */
+
+
+  imapReady() {
+    this.imap.openBox(this.mailbox, false, (err, mailbox) => {
+      if (err) {
+        this.emit('error', err);
+      } else {
+        this.emit('server:connected');
+        if (this.fetchUnreadOnStart) {
+          this.parseUnreadMessages();
+        }
+        this.imap.on('mail', () => this.imapMail());
+        this.imap.on('update', () => this.imapMail());
+      }
+    });
+  }
+
+  imapClose() {
+    this.emit('server:disconnected');
+  }
+
+  imapError(err) {
+    this.emit('error', err);
+  }
+
+  imapMail() {
+      this.parseUnreadMessages();
+  }
+
+  parseUnreadMessages() {
+    this.imap.search(this.searchFilter, (err, results) => {
+      if (err) this.emit('error', err);
+
+      //
+      results.forEach(result => this.getMessage(result));
+    });
+  }
+
+  getMessage(uid) {
+    this.imap.search([['UID', uid]], (err, results) => {
+      if (err) this.emit('message:error', err);
+      if (results.length > 0) {
+        let messageFetchQuery = this.imap.fetch(results[0], {
+          markSeen: true,
+          bodies: ''
         });
-        f.on('message', function(msg, seqno) {
-          var parser = new MailParser(self.mailParserOptions);
-          var attributes = null;
-          var emlbuffer = new Buffer('');
 
-          parser.on("end", function(mail) {
-            mail.eml = emlbuffer.toString('utf-8');
-            if (!self.mailParserOptions.streamAttachments && mail.attachments && self.attachments) {
-              async.each(mail.attachments, function( attachment, callback) {
-                fs.writeFile(self.attachmentOptions.directory + attachment.generatedFileName, attachment.content, function(err) {
-                  if(err) {
-                    self.emit('error', err);
-                    callback()
-                  } else {
-                    attachment.path = path.resolve(self.attachmentOptions.directory + attachment.generatedFileName);
-                    self.emit('attachment', attachment);
-                    callback()
+        messageFetchQuery.on('message', (message, sequenceNumber) => {
+          let parser = new MailParser(this.mailParserOptions);
+          let attributes = null;
+          let messageBuffer = Buffer.alloc(2084, '');
+
+          parser.on('end', mail => {
+            mail.message = messageBuffer.toString('UTF-8');
+
+            if (!this.mailParserOptions.streamAttachments && mail.attachments && this.attachments) {
+              async.each(mail.attachments, attachment => {
+                const specifiedFilePath = this.attachmentOptions.directory + attachment.generatedFileName;
+                fs.writeFile(specifiedFilePath, attachment.content, err => {
+                  if (err) this.emit('message:error', err);
+                  else {
+                    attachment.path = path.resolve(specifiedFilePath);
+                    this.emit('message:attachment', attachment);
                   }
                 });
-              }, function(err){
-                self.emit('mail', mail, seqno, attributes);
-                callback()
-              });
-            } else {
-              self.emit('mail',mail,seqno,attributes);
-            }
+              }, err => this.emit('message', mail, sequenceNumber, attributes));
+            } else this.emit('message', mail, sequenceNumber, attributes);
           });
-          parser.on("attachment", function (attachment) {
-            self.emit('attachment', attachment);
-          });
-          msg.on('body', function(stream, info) {
-            stream.on('data', function(chunk) {
-              emlbuffer = Buffer.concat([emlbuffer, chunk]);
+
+          parser.on('attachment', attachment => this.emit('message:attachment', attachment));
+
+          message.on('body', (stream, info) => {
+            stream.on('data', chunk => {
+              messageBuffer =  Buffer.concat([messageBuffer, chunk]);
             });
-            stream.once('end', function() {
-              parser.write(emlbuffer);
+            stream.once('end', () => {
+              parser.write(messageBuffer);
               parser.end();
-            });
+            })
           });
-          msg.on('attributes', function(attrs) {
-            attributes = attrs;
-          });
+
+          message.on('attributes', attr => attributes = attr);
         });
-        f.once('error', function(err) {
-          self.emit('error', err);
-        });
-      }, function(err){
-        if( err ) {
-          self.emit('error', err);
-        }
-      });
-    }
-  });
+
+        messageFetchQuery.on('error', err => this.emit('message:error', err));
+      }
+    });
+  }
 }
+
+module.exports = MailListener;

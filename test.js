@@ -1,9 +1,9 @@
 var MailListener = require("./");
 
 var mailListener = new MailListener({
-  username: "xxxx",
-  password: "xxx",
-  host: "imap.gmail.com",
+  username: "softwaredirector@nacoss.org.ng",
+  password: "nathaneil.nacoss.0110",
+  host: "mail.nacoss.org.ng",
   port: 993,
   tls: true,
   tlsOptions: { rejectUnauthorized: false },
@@ -11,16 +11,16 @@ var mailListener = new MailListener({
   markSeen: true,
   fetchUnreadOnStart: true,
   attachments: true,
-  attachmentOptions: { directory: "attachments/" }
+  // attachmentOptions: { directory: "attachments/" }
 });
 
 mailListener.start();
 
-mailListener.on("server:connected", function(){
+mailListener.on("server:connected", () => {
   console.log("imapConnected");
 });
 
-mailListener.on("server:disconnected", function(){
+mailListener.on("server:disconnected", () => {
   console.log("imapDisconnected");
 });
 
@@ -28,10 +28,15 @@ mailListener.on("error", function(err){
   console.log(err);
 });
 
-mailListener.on("mail", function(mail){
-  console.log(mail);
+mailListener.on("message:error", function(err){
+  console.log('message error', err);
 });
 
-mailListener.on("attachment", function(attachment){
+mailListener.on("message", (message, seqno, attributes) => {
+  console.log(message);
+});
+
+mailListener.on("message:attachment", function(attachment){
   console.log(attachment);
 });
+
