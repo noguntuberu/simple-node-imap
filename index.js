@@ -63,7 +63,7 @@ class SimpleImapMail extends EventEmitter {
   setEventListeners() {
     this.imap.once('ready', () => this.imapReady());
     this.imap.once('close', () => this.imapClose());
-    this.imap.on('error', () => this.imapError());
+    this.imap.on('error', (error) => this.imapError(error));
   }
 
   /** */
