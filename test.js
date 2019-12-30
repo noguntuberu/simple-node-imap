@@ -1,6 +1,6 @@
-var MailListener = require("./");
+var SimpleImap = require("./");
 
-var mailListener = new MailListener({
+var simpleImap = new SimpleImap({
   username: "softwaredirector@nacoss.org.ng",
   password: "nathaneil.nacoss.0110",
   host: "mail.nacoss.org.ng",
@@ -14,29 +14,29 @@ var mailListener = new MailListener({
   // attachmentOptions: { directory: "attachments/" }
 });
 
-mailListener.start();
+simpleImap.start();
 
-mailListener.on("server:connected", () => {
+simpleImap.on("server:connected", () => {
   console.log("imapConnected");
 });
 
-mailListener.on("server:disconnected", () => {
+simpleImap.on("server:disconnected", () => {
   console.log("imapDisconnected");
 });
 
-mailListener.on("error", function(err){
+simpleImap.on("error", function(err){
   console.log(err);
 });
 
-mailListener.on("message:error", function(err){
+simpleImap.on("message:error", function(err){
   console.log('message error', err);
 });
 
-mailListener.on("message", (message, seqno, attributes) => {
+simpleImap.on("message", (message, seqno, attributes) => {
   console.log(message);
 });
 
-mailListener.on("message:attachment", function(attachment){
+simpleImap.on("message:attachment", function(attachment){
   console.log(attachment);
 });
 

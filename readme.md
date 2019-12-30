@@ -55,18 +55,19 @@ simpleImap.on("error", function(err){
   console.log(err);
 });
 
-mailListener.on("message:error", function(err){
+simpleImap.on("message:error", function(err){
   console.log('message error', err);
 });
 
-mailListener.on("message", (message, seqno, attributes) => {
+simpleImap.on("message", (message, seqno, attributes) => {
   console.log(message);
 });
 
-mailListener.on("message:attachment", function(attachment){
+simpleImap.on("message:attachment", function(attachment){
   console.log(attachment);
 });
 
+```
 
 ## Attachments
 
