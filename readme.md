@@ -1,16 +1,15 @@
 # Overview
 
-Mail-listener2 library for node.js. Get notification when new email arrived to inbox or when message metadata (e.g. flags) changes externally. Uses IMAP protocol.
+Simple imap library for node.js. Get new mail notifications and fetch individual messages from mailboxes. Uses IMAP protocol.
 
-We are using these libraries: [node-imap](https://github.com/mscdex/node-imap), [mailparser](https://github.com/andris9/mailparser).
+An extension of [mail-listener2](https://github.com/chirag04/mail-listener2).
 
-Heavily inspired by [mail-listener](https://github.com/circuithub/mail-listener).
 
 ## Use
 
 Install
 
-`npm install mail-listener2`
+`npm install simple-node-imap`
 
 
 JavaScript Code:
@@ -18,9 +17,9 @@ JavaScript Code:
 
 ```javascript
 
-var MailListener = require("mail-listener2");
+var SimpleImap = require("simple-node-imap");
 
-var mailListener = new MailListener({
+var simpleImap = new SimpleImap({
   username: "imap-username",
   password: "imap-password",
   host: "imap-host",
@@ -39,48 +38,48 @@ var mailListener = new MailListener({
   attachmentOptions: { directory: "attachments/" } // specify a download directory for attachments
 });
 
-mailListener.start(); // start listening
+simpleImap.start(); // start listening
 
 // stop listening
-//mailListener.stop();
+//simpleImap.stop();
 
-mailListener.on("server:connected", function(){
+simpleImap.on("server:connected", function(){
   console.log("imapConnected");
 });
 
-mailListener.on("server:disconnected", function(){
+simpleImap.on("server:disconnected", function(){
   console.log("imapDisconnected");
 });
 
-mailListener.on("error", function(err){
+simpleImap.on("error", function(err){
   console.log(err);
 });
 
-mailListener.on("mail", function(mail, seqno, attributes){
-  // do something with mail object including attachments
-  console.log("emailParsed", mail);
-  // mail processing code goes here
+mailListener.on("message:error", function(err){
+  console.log('message error', err);
 });
 
-mailListener.on("attachment", function(attachment){
-  console.log(attachment.path);
+mailListener.on("message", (message, seqno, attributes) => {
+  console.log(message);
 });
 
-// it's possible to access imap object from node-imap library for performing additional actions. E.x.
-mailListener.imap.move(:msguids, :mailboxes, function(){})
+mailListener.on("message:attachment", function(attachment){
+  console.log(attachment);
+});
 
-```
-
-That's easy!
 
 ## Attachments
+
 Attachments can be streamed or buffered. This feature is based on how [mailparser](https://github.com/andris9/mailparser#attachments) handles attachments.
 Setting `attachments: true` will download attachments as buffer objects by default to the project directory.
 A specific download directory may be specified by setting `attachmentOptions: { directory: "attachments/"}`.
 Attachments may also be streamed using `attachmentOptions: { stream: "true"}`. The `"attachment"` event will be fired every time an attachment is encountered.
 Refer to the [mailparser docs](https://github.com/andris9/mailparser#attachment-streaming) for specifics on how to stream attachments.
 
-
 ## License
 
 MIT
+
+## Credit
+
+A special shoutout to [Chirag](https://github.com/chirag04) for creating mail-listener2 qhich I extended further.

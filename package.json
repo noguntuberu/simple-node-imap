@@ -1,7 +1,7 @@
 {
-  "name": "mail-listener2",
-  "version": "0.3.1",
-  "description": "Mail listener library for node.js. Get notification when new email arrived.",
+  "name": "simple-node-imap",
+  "version": "1.0.0",
+  "description": "Simple imap library for listening and retreiving mails in node.js. Get notification when new email arrived.",
   "dependencies": {
     "imap": "~0.8.14",
     "mailparser": "~0.4.6",
@@ -9,9 +9,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/chirag04/mail-listener2.git"
+    "url": "git://github.com/noguntuberu/simple-node-imap.git"
   },
-  "homepage": "https://github.com/chirag04/mail-listener2",
+  "homepage": "https://github.com/noguntuberu/simple-node-imap",
   "keywords": [
     "mail",
     "job",
@@ -21,9 +21,9 @@
     "email parser"
   ],
   "author": {
-    "name": "Chirag Jain",
-    "email": "jain_chirag04@yahoo.com",
-    "url": "http://chiragjain.tumblr.com"
+    "name": "Oguntuberu Nathan O",
+    "email": "nateoguns.work@gmail.com",
+    "url": "https://noguntuberu.github.io"
   },
   "license": "MIT"
 }

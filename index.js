@@ -5,7 +5,7 @@ var fs = require("fs");
 var path = require('path');
 var async = require('async');
 
-class MailListener extends EventEmitter {
+class SimpleImapMail extends EventEmitter {
   constructor(options) {
     super();
     this.uids = [];
@@ -166,4 +166,4 @@ class MailListener extends EventEmitter {
   }
 }
 
-module.exports = MailListener;
+module.exports = SimpleImapMail;
