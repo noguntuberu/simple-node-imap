@@ -1,9 +1,9 @@
 var SimpleImap = require("./");
 
 var simpleImap = new SimpleImap({
-  username: "softwaredirector@nacoss.org.ng",
-  password: "nathaneil.nacoss.0110",
-  host: "mail.nacoss.org.ng",
+  username: "test_username",
+  password: "********",
+  host: "your_host",
   port: 993,
   tls: true,
   tlsOptions: { rejectUnauthorized: false },
