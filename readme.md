@@ -83,4 +83,4 @@ MIT
 
 ## Credit
 
-A special shoutout to [Chirag](https://github.com/chirag04) for creating mail-listener2 qhich I extended further.
+A special shoutout to [Chirag](https://github.com/chirag04) for creating mail-listener2 and this README which I extended/edited.
