@@ -55,7 +55,7 @@ simpleImap.on("message", message => {
 });
 
 
-stop listening
+// stop listening
 simpleImap.stop();
 
 ```
