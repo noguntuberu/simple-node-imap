@@ -1,11 +1,13 @@
 {
   "name": "simple-node-imap",
-  "version": "1.0.2",
-  "description": "Simple imap library for listening and retreiving mails in node.js. Get notification when new email arrived.",
+  "version": "2.0.1",
+  "description": "Simple imap module for listening and retreiving mails in node.js.",
   "dependencies": {
     "async": "^3.1.1",
     "imap": "^0.8.19",
-    "mailparser": "^2.7.7"
+    "mailparser": "^2.7.7",
+    "tslint": "^6.0.0",
+    "typescript": "^3.7.5"
   },
   "repository": {
     "type": "git",

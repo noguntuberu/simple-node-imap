@@ -1,9 +1,7 @@
 var Imap = require('imap');
 var EventEmitter = require('events').EventEmitter;
 var MailParser = require("mailparser").MailParser;
-var fs = require("fs");
-var path = require('path');
-var async = require('async');
+var Parser = require('./lib/Parser');
 
 class SimpleImapMail extends EventEmitter {
   constructor(options) {
@@ -14,6 +12,7 @@ class SimpleImapMail extends EventEmitter {
     this.instantiateImap(options);
     this.setEventListeners();
 
+    this.parsedMessage;
   }
 
   instantiateImap(options) {
@@ -44,9 +43,9 @@ class SimpleImapMail extends EventEmitter {
   }
 
   setCofigurationOptions(options) {
-    this.markSeen = options.markSeen || true;
+    this.markSeen = options.markSeen === true;
     this.mailbox = options.mailbox || "INBOX";
-    this.fetchUnreadOnStart = options.fetchUnreadOnStart || true;
+    this.fetchUnreadOnStart = options.fetchUnreadOnStart === true;
     this.mailParserOptions = options.mailParserOptions || {};
     this.attachmentOptions = options.attachmentOptions || {};
     this.attachments = options.attachments || false;
@@ -102,9 +101,9 @@ class SimpleImapMail extends EventEmitter {
   }
 
   imapMail() {
-      this.parseUnreadMessages();
+    this.parseUnreadMessages();
   }
-
+  
   parseUnreadMessages() {
     this.imap.search(this.searchFilter, (err, results) => {
       if (err) this.emit('error', err);
@@ -117,6 +116,7 @@ class SimpleImapMail extends EventEmitter {
   getMessage(uid) {
     this.imap.search([['UID', uid]], (err, results) => {
       if (err) this.emit('message:error', err);
+
       if (results.length > 0) {
         let messageFetchQuery = this.imap.fetch(results[0], {
           markSeen: true,
@@ -125,39 +125,20 @@ class SimpleImapMail extends EventEmitter {
 
         messageFetchQuery.on('message', (message, sequenceNumber) => {
           let parser = new MailParser(this.mailParserOptions);
-          let attributes = null;
-          let messageBuffer = Buffer.alloc(2084, '');
 
-          parser.on('end', mail => {
-            mail.message = messageBuffer.toString('UTF-8');
+          message.on('body', body => {
+            body.pipe(parser);
+          })
 
-            if (!this.mailParserOptions.streamAttachments && mail.attachments && this.attachments) {
-              async.each(mail.attachments, attachment => {
-                const specifiedFilePath = this.attachmentOptions.directory + attachment.generatedFileName;
-                fs.writeFile(specifiedFilePath, attachment.content, err => {
-                  if (err) this.emit('message:error', err);
-                  else {
-                    attachment.path = path.resolve(specifiedFilePath);
-                    this.emit('message:attachment', attachment);
-                  }
-                });
-              }, err => this.emit('message', mail, sequenceNumber, attributes));
-            } else this.emit('message', mail, sequenceNumber, attributes);
-          });
+          parser.on('headers', headers => Parser.parseHeaders(headers));
 
-          parser.on('attachment', attachment => this.emit('message:attachment', attachment));
+          parser.on('data', data => Parser.parseMessageData(data));
 
-          message.on('body', (stream, info) => {
-            stream.on('data', chunk => {
-              messageBuffer =  Buffer.concat([messageBuffer, chunk]);
-            });
-            stream.once('end', () => {
-              parser.write(messageBuffer);
-              parser.end();
-            })
-          });
+          parser.on('end', () => {
+            this.emit('message', Parser.getParseResult());
+          })
 
-          message.on('attributes', attr => attributes = attr);
+          parser.on('error', error => this.emit('error', error));
         });
 
         messageFetchQuery.on('error', err => this.emit('message:error', err));
